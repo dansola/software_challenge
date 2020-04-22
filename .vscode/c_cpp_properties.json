@@ -10,7 +10,8 @@
                 "/opt/ros/melodic/include/**",
                 "/home/dsola/catkin_ws2/src/beginner_tutorials/include/**",
                 "/usr/include/**",
-                "/opt/ros/melodic/include"
+                "/opt/ros/melodic/include",
+                "/home/dsola/catkin_ws2/devel/.private/software_challenge/include"
             ],
             "name": "ROS",
             "intelliSenseMode": "gcc-x64",
