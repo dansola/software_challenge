@@ -6,4 +6,4 @@ float32 y
 float32 time
 ---
 # feedback
-float32 disance
+float32 distance

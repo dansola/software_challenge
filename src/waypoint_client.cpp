@@ -24,13 +24,13 @@ int main (int argc, char **argv) {
 
     ac.sendGoal(goal);
 
-    bool finished_before_timeout = ac.waitForResult(ros::Duration(30.0));
+    bool finished_before_timeout = ac.waitForResult(ros::Duration(100.0));
 
     if (finished_before_timeout) {
         ROS_INFO("Succesfully moved the turtle to x=%f, y=%f", x, y);
     }
     else {
-        ROS_INFO("Turtle did not move to x=%f, y=%f before the time out.", x, y);
+        ROS_ERROR("Turtle did not move to x=%f, y=%f before the time out.", x, y);
     }
 
     return 0;
