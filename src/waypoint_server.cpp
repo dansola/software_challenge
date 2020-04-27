@@ -9,8 +9,8 @@
 float movingX, movingY;
 
 void movingPoseCB(const turtlesim::Pose::ConstPtr& msg) {
-    movingX = msg -> x;
-    movingY = msg -> y;
+    movingX = msg->x;
+    movingY = msg->y;
 }
 
 typedef actionlib::SimpleActionServer<software_challenge::waypointAction> Server;
@@ -38,6 +38,31 @@ class waypointAction {
         ~waypointAction (void) {
         }
 
+		float atanShift (float y2, float y1, float x2, float x1, float shift) {
+			return shift + atan((y2 - y1)/ (x2 - x1));
+		}
+
+		float angleCalc (float x2, float y2, float x1, float y1) {
+			if (x2 >= x1) {
+				return atanShift(y2, y1, x2, x1, 0);
+			}
+			else if (y2 >= y1) {
+				return atanShift(y2, y1, x2, x1, M_PI);
+			}
+			else {
+				return atanShift(y2, y1, x2, x1, -M_PI);
+			}
+		}
+
+		float calcDist (float x1, float x2, float y1, float y2) {
+			return sqrt(pow(x1 - x2, 2) + pow(y1 - y2, 2));
+		}
+
+		float setTime (ros::Time t_0) {
+			ros::Time t_i = ros::Time::now();
+			return (t_i - t_0).toSec();
+		}
+
         void executeCB (const software_challenge::waypointGoalConstPtr &goal) {
 
             ros::Subscriber movingPoseSub = nh_.subscribe("/moving_turtle/pose", 1000, movingPoseCB);
@@ -49,73 +74,76 @@ class waypointAction {
 
 			ros::spinOnce();
 
-			float relative_angle = atan(((goal->y - movingY))/(goal->x - movingX));
-			float angular_speed = 0.1;
-			float target_distance = sqrt(pow(movingX - goal->x, 2) + pow(movingY - goal->y, 2)); 
-			float linear_speed = 0.5;
+			float movingX = 10;
+			float movingY = 5;
 
-			ROS_INFO("Relative Angle  : %f", relative_angle);
-			ROS_INFO("Angular Speed   : %f", angular_speed);
-			ROS_INFO("Target Distance : %f", target_distance);
+			float angle = angleCalc(goal->x, goal->x, movingX, movingY);
+			float distance = calcDist(movingX, goal->x, movingY, goal->y);
+			
+			float dAngle = 0;
+			float dDistance = 0;
+			float dTheta_dt = 1;
+			float dx_dt = 1;
 
 			geometry_msgs::Twist msg;
 
-			msg.linear.x = msg.linear.y = msg.linear.z = msg.angular.x = msg.angular.y = 0;
-			msg.angular.z = angular_speed;
+			msg.linear.x = 0;
+			msg.angular.z = dTheta_dt;
 
+			ros::Rate loop_rate(100);
 
-			float current_angle = 0;
-			float current_distance = 0;
-
-			ros::Rate r(100);
-
-			ros::Time begin = ros::Time::now();
-			r.sleep();
+			loop_rate.sleep();
 			movingVelPub.publish(msg);
 			
-			
-			while (current_angle < relative_angle) {
-				ROS_INFO("Current Angle: %f", current_angle);
-				movingVelPub.publish(msg);
-				
-				float change = (ros::Time::now() - begin).toSec();
-				current_angle = angular_speed * change;
-				
+			float dt;
+			ros::Time t_i;
+			ros::Time t_0 = ros::Time::now();
+
+			while (dAngle < angle) {
 				if (as_.isPreemptRequested() || !ros::ok()) {
 			        ROS_INFO("%s: Preempted", action_name_.c_str());
 			        as_.setPreempted();
 			        success = false;
 			        break;
 			    }
-            
-				feedback_.distance = target_distance;
-				as_.publishFeedback(feedback_);
-				r.sleep();
-			}
 
-			msg.linear.x = linear_speed;
-			msg.angular.z = 0;
-			result_.time = (ros::Time::now() - begin).toSec();
-
-			begin = ros::Time::now();
-
-			while (current_distance < target_distance) {
-				ROS_INFO("Current Distance: %f", current_distance);
 				movingVelPub.publish(msg);
-				float change = (ros::Time::now() - begin).toSec();
-				current_distance = linear_speed * change;
-				feedback_.distance = target_distance - current_distance;
-				as_.publishFeedback(feedback_);				
-				r.sleep();
+				
+				dt = setTime(t_0);
+				dAngle = dTheta_dt * dt;
+				
+				feedback_.distance = distance;
+				as_.publishFeedback(feedback_);
+				loop_rate.sleep();
 			}
 
-		
-			result_.time += (ros::Time::now() - begin).toSec();
+			msg.linear.x = dx_dt;
+			msg.angular.z = 0;
+
+			result_.time = setTime(t_0);
+			t_0 = ros::Time::now();
+
+			while (dDistance < distance) {
+				if (as_.isPreemptRequested() || !ros::ok()) {
+			        ROS_INFO("%s: Preempted", action_name_.c_str());
+			        as_.setPreempted();
+			        success = false;
+			        break;
+			    }
+
+				movingVelPub.publish(msg);
+
+				dt = setTime(t_0);
+				dDistance = dx_dt * dt;
+
+				feedback_.distance = distance - dDistance;
+				as_.publishFeedback(feedback_);				
+				loop_rate.sleep();
+			}
 
 			if (success) {
-				result_.time = (ros::Time::now() - begin).toSec();
+				result_.time = setTime(t_0);
 				ROS_INFO("%s: Succeeded", action_name_.c_str());
-				//set action state to succeeded
 				as_.setSucceeded(result_);
 			}
 		}  

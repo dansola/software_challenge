@@ -13,9 +13,9 @@ int main (int argc, char **argv) {
     ROS_INFO("Waypoint action server started.  Where do you want the moving turtle to go?");
 
     float x, y;
-    std::cout << "X Coordinate:";
+    std::cout << "X Coordinate: ";
     std::cin >> x;
-    std::cout << "Y Coordinate:";
+    std::cout << "Y Coordinate: ";
     std::cin >> y;
 
     software_challenge::waypointGoal goal;
