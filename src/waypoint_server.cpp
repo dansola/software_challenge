@@ -39,7 +39,7 @@ class waypointAction {
         }
 
 		float atanShift (float y2, float y1, float x2, float x1, float shift) {
-			return shift + atan((y2 - y1)/ (x2 - x1));
+			return shift + atan((y2 - y1) / (x2 - x1));
 		}
 
 		float angleCalc (float x2, float y2, float x1, float y1) {
@@ -65,7 +65,7 @@ class waypointAction {
 
         void executeCB (const software_challenge::waypointGoalConstPtr &goal) {
 
-            ros::Subscriber movingPoseSub = nh_.subscribe("/moving_turtle/pose", 1000, movingPoseCB);
+			ros::Subscriber movingPoseSub = nh_.subscribe<turtlesim::Pose>("/moving_turtle/pose", 1000, &movingPoseCB);
             ros::Publisher movingVelPub = nh_.advertise<geometry_msgs::Twist>("moving_turtle/cmd_vel", 1000);
 
             ROS_INFO("%s: Executing, moving moving_turtle to (%f %f).", action_name_.c_str(), goal->x, goal->y);
@@ -73,9 +73,6 @@ class waypointAction {
 			bool success = true;
 
 			ros::spinOnce();
-
-			float movingX = 10;
-			float movingY = 5;
 
 			float angle = angleCalc(goal->x, goal->x, movingX, movingY);
 			float distance = calcDist(movingX, goal->x, movingY, goal->y);
